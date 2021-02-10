@@ -428,6 +428,7 @@ MochaJUnitReporter.prototype.getTestcaseData = function(test, err) {
 
     testcase.testcase.push({failure: failureElement});
   }
+  console.error(JSON.stringify(testcase))
   return testcase;
 };
 
@@ -538,7 +539,8 @@ MochaJUnitReporter.prototype.getXml = function(testsuites) {
  * @param {string} xml - xml string
  * @param {string} filePath - path to output file
  */
-MochaJUnitReporter.prototype.writeXmlToDisk = function(xml, filePath){
+MochaJUnitReporter.prototype.writeXmlToDisk = function (xml, filePath) {
+  console.error(xml)
   if (filePath) {
     if (filePath.indexOf('[hash]') !== -1) {
       filePath = filePath.replace('[hash]', md5(xml));
