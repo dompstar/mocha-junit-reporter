@@ -71,6 +71,7 @@ function configureDefaults(options) {
   config.toConsole = !!config.toConsole;
   config.rootSuiteTitle = config.rootSuiteTitle || 'Root Suite';
   config.testsuitesTitle = config.testsuitesTitle || 'Mocha Tests';
+  config.addTags = config.addTags || false;
 
   if (config.antMode) {
     updateOptionsForAntMode(config);
@@ -104,6 +105,39 @@ function updateOptionsForJenkinsMode(options) {
   if (options.suiteTitleSeparatedBy === undefined) {
     options.suiteTitleSeparatedBy = '.';
   }
+}
+
+/**
+ * 
+ * @param {} testTitle 
+ */
+function getTags(testTitle) {
+  var regexAllTags = /@[A-Za-z]+=[A-Za-z0-9\-]+/gi
+  var regexTag = /@([A-Za-z]+)=([A-Za-z0-9\-]+)/i
+
+  var result = {
+    tags: {},
+    cleanTitle: testTitle,
+    tagsFound: false
+  };
+
+  var foundTags = testTitle.match(regexAllTags);
+
+  if (foundTags && foundTags.length > 0) {
+    result.tagsFound = true;
+    foundTags.forEach((tag) => {
+      var parts = tag.match(regexTag);
+
+      result.cleanTitle = result.cleanTitle.replace(tag, "")
+      if (parts.length > 0) {
+        result.tags[parts[1]] = parts[2];
+      }
+    });
+  }
+
+  result.cleanTitle = result.cleanTitle.trim();
+
+  return result;
 }
 
 /**
@@ -321,6 +355,16 @@ MochaJUnitReporter.prototype.getTestcaseData = function(test, err) {
   var jenkinsMode = this._options.jenkinsMode;
   var flipClassAndName = this._options.testCaseSwitchClassnameAndName;
   var name = stripAnsi(jenkinsMode ? getJenkinsClassname(test, this._options) : test.fullTitle());
+
+  var tagResult = null;
+   if (this._options.addTags) {
+     tagResult = getTags(test.title);
+     if (tagResult.tagsFound){
+       name = stripAnsi(tagResult.cleanTitle)
+     }
+   }
+
+
   var classname = stripAnsi(test.title);
   var testcase = {
     testcase: [{
@@ -331,6 +375,17 @@ MochaJUnitReporter.prototype.getTestcaseData = function(test, err) {
       }
     }]
   };
+
+  if (tagResult && tagResult.tags){
+     Object.keys(tagResult.tags).forEach(tagName => 
+       {
+         var tagValue = "";
+         if (tagResult.tags[tagName]){
+           tagValue = tagResult.tags[tagName];
+         }
+         testcase.testcase[0]._attr[tagName] = tagValue;
+       });
+   }
 
   // We need to merge console.logs and attachments into one <system-out> -
   //  see JUnit schema (only accepts 1 <system-out> per test).
